@@ -199,10 +199,10 @@ export default function Nav({ children }: { children: ReactNode }) {
               className="rounded-lg p-2 hover:bg-stone-200 dark:hover:bg-stone-700"
             >
               <Image
-                src="/logo.png"
+                src="/logo.svg"
                 width={24}
                 height={24}
-                alt="Logo"
+                alt="Snowball Logo"
                 className="dark:scale-110 dark:rounded-full dark:border dark:border-stone-400"
               />
             </Link>
