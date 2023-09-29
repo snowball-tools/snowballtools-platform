@@ -23,6 +23,6 @@ export async function POST(
       expiresIn: "1h",
     });
 
-    NextResponse.json({ token, address: user.address });
+    NextResponse.json({ token });
   }
 }

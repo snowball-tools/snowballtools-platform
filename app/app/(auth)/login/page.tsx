@@ -4,31 +4,48 @@ import Image from "next/image";
 import { Suspense } from "react";
 import AuthButton, { AuthButtonType } from "@/components/auth-button";
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { redirect } from "next/navigation";
 import axios from "axios";
 import { snowball } from "@/lib/snowball";
+
+enum RegistrationState {
+  Default,
+  Registering,
+  Registered,
+}
 
 const LoginPage = () => {
   const [username, setUsername] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const [isRegistering, setIsRegistering] = useState(false);
-  const router = useRouter();
+  const [registrationState, setIsRegistering] = useState(
+    RegistrationState.Default,
+  );
 
   const handleLogin = async () => {
     try {
-      isRegistering
-        ? await snowball.register(username)
-        : await snowball.authenticate();
+      switch (registrationState) {
+        case RegistrationState.Registering:
+          await snowball.register(username);
+          setIsRegistering(RegistrationState.Registered);
+          return;
+        case RegistrationState.Registered:
+        case RegistrationState.Default:
+          await snowball.authenticate();
+          break;
+      }
 
       const address = await snowball.getAddress();
-      const response = await axios.post("/api/auth/route", {
-        address,
-        username,
+      const response = await fetch("/api/auth", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ address, username }),
       });
       // TODO: Save the token securely ie HttpOnly cookie
       // For now, we'll save it in localStorage (not recommended for production)
-      localStorage.setItem("token", response.data.token);
-      router.push("/dashboard");
+      localStorage.setItem("token", await response.text());
+      redirect("/dashboard");
     } catch (err) {
       setError(`Error: ${JSON.stringify(err)}`);
     }
@@ -56,23 +73,28 @@ const LoginPage = () => {
             <div className="my-2 h-10 w-full rounded-md border border-stone-200 bg-stone-100 dark:border-stone-700 dark:bg-stone-800" />
           }
         >
-          {isRegistering ? (
+          {registrationState === RegistrationState.Registering ? (
             <input
               className="group my-2 flex h-10 w-full items-center justify-center space-x-2 rounded-md border border-stone-200 bg-white text-sm font-medium text-stone-600 transition-colors  placeholder:text-stone-700 focus:border-black focus:ring-stone-700 dark:border-stone-700 dark:bg-black  dark:text-stone-400 dark:hover:bg-black"
               onChange={(e) => setUsername(e.target.value)}
               placeholder="ie. Taylor Swift"
             />
           ) : (
-            <AuthButton type={AuthButtonType.Login} onClick={() => {}} />
+            <AuthButton type={AuthButtonType.Login} onClick={handleLogin} />
           )}
-          <AuthButton
-            type={AuthButtonType.Register}
-            onClick={() => {
-              isRegistering && username !== ""
-                ? handleLogin()
-                : setIsRegistering(true);
-            }}
-          />
+
+          {registrationState === RegistrationState.Registered ? (
+            <></>
+          ) : (
+            <AuthButton
+              type={AuthButtonType.Register}
+              onClick={() => {
+                registrationState && username !== ""
+                  ? handleLogin()
+                  : setIsRegistering(RegistrationState.Registering);
+              }}
+            />
+          )}
         </Suspense>
       </div>
     </div>
