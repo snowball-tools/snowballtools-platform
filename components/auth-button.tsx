@@ -5,6 +5,7 @@ import LoadingDots from "@/components/icons/loading-dots";
 import { useState } from "react";
 import { toast } from "sonner";
 import { snowball } from "@/lib/snowball";
+import { on } from "events";
 
 export enum AuthButtonType {
   Login,
@@ -13,41 +14,39 @@ export enum AuthButtonType {
 
 export interface AuthButtonProps {
   type: AuthButtonType;
-  onAuth: (user: string) => void;
+  onClick?: () => void;
 }
 
-export default function AuthButton({ type, onAuth }: AuthButtonProps) {
+export default function AuthButton({ type, onClick }: AuthButtonProps) {
   const [loading, setLoading] = useState(false);
   const [isAuth, setIsAuth] = useState(false);
 
-  async function authAction() {
-    setLoading(true);
-    try {
-      switch (type) {
-        case AuthButtonType.Login:
-          await snowball.authenticate();
-          const user = await snowball.getAddress();
-          onAuth(user);
-          setLoading(false);
-          break;
-        case AuthButtonType.Register:
-          await snowball.register("snowball dashboard");
-          setLoading(false);
-          break;
-      }
-      setIsAuth(true);
-    } catch (error) {
-      toast.error(`Error: ${JSON.stringify(error)}`);
-      setLoading(false);
-    }
-  }
+  // async function authAction() {
+  //   setLoading(true);
+  //   try {
+  //     switch (type) {
+  //       case AuthButtonType.Login:
+  //         await snowball.authenticate();
+  //         const user = await snowball.getAddress();
+  //         onAuth(user);
+  //         setLoading(false);
+  //         break;
+  //       case AuthButtonType.Register:
+  //         await snowball.register("snowball dashboard");
+  //         setLoading(false);
+  //         break;
+  //     }
+  //     setIsAuth(true);
+  //   } catch (error) {
+  //     toast.error(`Error: ${JSON.stringify(error)}`);
+  //     setLoading(false);
+  //   }
+  // }
 
   return (
     <button
       disabled={loading}
-      onClick={() => {
-        authAction();
-      }}
+      onClick={onClick}
       className={`${
         loading
           ? "cursor-not-allowed bg-stone-50 dark:bg-stone-800"

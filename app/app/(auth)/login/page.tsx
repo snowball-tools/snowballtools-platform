@@ -2,14 +2,40 @@
 
 import Image from "next/image";
 import { Suspense } from "react";
-import AuthButton, {
-  AuthButtonType,
-  AuthButtonProps,
-} from "@/components/auth-button";
+import AuthButton, { AuthButtonType } from "@/components/auth-button";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import axios from "axios";
+import { snowball } from "@/lib/snowball";
 
-export default function LoginPage() {
+const LoginPage = () => {
+  const [username, setUsername] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [isRegistering, setIsRegistering] = useState(false);
+  const router = useRouter();
+
+  const handleLogin = async () => {
+    try {
+      isRegistering
+        ? await snowball.register(username)
+        : await snowball.authenticate();
+
+      const address = await snowball.getAddress();
+      const response = await axios.post("/api/auth/route", {
+        address,
+        username,
+      });
+      // TODO: Save the token securely ie HttpOnly cookie
+      // For now, we'll save it in localStorage (not recommended for production)
+      localStorage.setItem("token", response.data.token);
+      router.push("/dashboard");
+    } catch (err) {
+      setError(`Error: ${JSON.stringify(err)}`);
+    }
+  };
+
   return (
-    <div className="mx-5 border border-stone-200 py-10 dark:border-stone-700 sm:mx-auto sm:w-full sm:max-w-md sm:rounded-lg sm:shadow-md">
+    <div className="mx-auto flex w-full max-w-md flex-col rounded-lg py-10 shadow-md">
       <Image
         alt="Snowball Logo"
         width={100}
@@ -30,10 +56,27 @@ export default function LoginPage() {
             <div className="my-2 h-10 w-full rounded-md border border-stone-200 bg-stone-100 dark:border-stone-700 dark:bg-stone-800" />
           }
         >
-          <AuthButton type={AuthButtonType.Login} onAuth={() => {}} />
-          <AuthButton type={AuthButtonType.Register} onAuth={() => {}} />
+          {isRegistering ? (
+            <input
+              className="group my-2 flex h-10 w-full items-center justify-center space-x-2 rounded-md border border-stone-200 bg-white text-sm font-medium text-stone-600 transition-colors  placeholder:text-stone-700 focus:border-black focus:ring-stone-700 dark:border-stone-700 dark:bg-black  dark:text-stone-400 dark:hover:bg-black"
+              onChange={(e) => setUsername(e.target.value)}
+              placeholder="ie. Taylor Swift"
+            />
+          ) : (
+            <AuthButton type={AuthButtonType.Login} onClick={() => {}} />
+          )}
+          <AuthButton
+            type={AuthButtonType.Register}
+            onClick={() => {
+              isRegistering && username !== ""
+                ? handleLogin()
+                : setIsRegistering(true);
+            }}
+          />
         </Suspense>
       </div>
     </div>
   );
-}
+};
+
+export default LoginPage;

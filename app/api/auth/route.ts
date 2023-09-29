@@ -12,34 +12,21 @@ export default async function handler(
     return res.status(405).end();
   }
 
-  const { address } = req.body;
+  const { address, username } = req.body;
 
-  const existingUser = await prisma.user.findUnique({
+  let user = await prisma.user.findUnique({
     where: { address },
   });
 
-  if (existingUser) {
-    const token = jwt.sign(
-      { id: existingUser.id, username: existingUser.username },
-      "secret",
-      {
-        expiresIn: "1h",
-      },
-    );
-    res.status(200).json({ token, username: existingUser.username });
+  if (!user) {
+    user = await prisma.user.create({
+      data: { address, username },
+    });
   } else {
-    const newUser = await prisma.user.create({
-      data: { address },
+    const token = jwt.sign({ id: user.id, address: user.address }, "secret", {
+      expiresIn: "1h",
     });
 
-    const token = jwt.sign(
-      { id: newUser.id, address: newUser.address },
-      "secret",
-      {
-        expiresIn: "1h",
-      },
-    );
-
-    res.status(201).json({ token, address: newUser.address });
+    res.status(201).json({ token, address: user.address });
   }
 }
