@@ -16,19 +16,6 @@ export default async function SettingsPage() {
           Settings
         </h1>
         <Form
-          title="Name"
-          description="Your name on this app."
-          helpText="Please use 32 characters maximum."
-          inputAttrs={{
-            name: "name",
-            type: "text",
-            defaultValue: session.user.name!,
-            placeholder: "Brendon Urie",
-            maxLength: 32,
-          }}
-          handleSubmit={editUser}
-        />
-        <Form
           title="Email"
           description="Your email on this app."
           helpText="Please enter a valid email."
