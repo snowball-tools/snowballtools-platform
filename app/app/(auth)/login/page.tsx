@@ -2,7 +2,10 @@
 
 import Image from "next/image";
 import { Suspense } from "react";
-import AuthButton, { AuthButtonType, AuthButtonProps } from "./AuthButton";
+import AuthButton, {
+  AuthButtonType,
+  AuthButtonProps,
+} from "@/components/auth-button";
 
 export default function LoginPage() {
   return (
@@ -27,8 +30,8 @@ export default function LoginPage() {
             <div className="my-2 h-10 w-full rounded-md border border-stone-200 bg-stone-100 dark:border-stone-700 dark:bg-stone-800" />
           }
         >
-          <AuthButton type={AuthButtonType.Login} />
-          <AuthButton type={AuthButtonType.Register} />
+          <AuthButton type={AuthButtonType.Login} onAuth={() => {}} />
+          <AuthButton type={AuthButtonType.Register} onAuth={() => {}} />
         </Suspense>
       </div>
     </div>
