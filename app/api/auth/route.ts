@@ -1,18 +1,14 @@
-import type { NextApiRequest, NextApiResponse } from "next";
+import { NextResponse } from "next/server";
 import { PrismaClient } from "@prisma/client";
 import jwt from "jsonwebtoken";
 
 const prisma = new PrismaClient();
 
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse,
+export async function POST(
+  req: Request,
+  { params }: { params: { address: string; username: string } },
 ) {
-  if (req.method !== "POST") {
-    return res.status(405).end();
-  }
-
-  const { address, username } = req.body;
+  const { address, username } = params;
 
   let user = await prisma.user.findUnique({
     where: { address },
@@ -27,6 +23,6 @@ export default async function handler(
       expiresIn: "1h",
     });
 
-    res.status(201).json({ token, address: user.address });
+    NextResponse.json({ token, address: user.address });
   }
 }

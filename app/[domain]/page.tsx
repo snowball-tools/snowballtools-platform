@@ -48,7 +48,7 @@ export default async function SiteHomePage({
                   <div className="relative h-8 w-8 flex-none overflow-hidden rounded-full">
                     {data.user?.image ? (
                       <BlurImage
-                        alt={data.user?.name ?? "User Avatar"}
+                        alt={data.user?.username ?? "User Avatar"}
                         width={100}
                         height={100}
                         className="h-full w-full object-cover"
@@ -61,7 +61,7 @@ export default async function SiteHomePage({
                     )}
                   </div>
                   <p className="ml-3 inline-block whitespace-nowrap align-middle text-sm font-semibold dark:text-white md:text-base">
-                    {data.user?.name}
+                    {data.user?.username}
                   </p>
                   <div className="h-6 border-l border-stone-600 dark:border-stone-400" />
                   <p className="m-auto my-5 w-10/12 text-sm font-light text-stone-500 dark:text-stone-400 md:text-base">
