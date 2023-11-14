@@ -2,6 +2,7 @@ import { getServerSession, type NextAuthOptions } from "next-auth";
 import GitHubProvider from "next-auth/providers/github";
 import { PrismaAdapter } from "@next-auth/prisma-adapter";
 import prisma from "@/lib/prisma";
+import CredentialsProvider from "next-auth/providers/credentials";
 
 const VERCEL_DEPLOYMENT = !!process.env.VERCEL_URL;
 
@@ -18,6 +19,36 @@ export const authOptions: NextAuthOptions = {
           email: profile.email,
           image: profile.avatar_url,
         };
+      },
+    }),
+    CredentialsProvider({
+      name: "snowball-auth",
+      credentials: {
+        address: { label: "address", type: "text" },
+        username: { label: "username", type: "text", placeholder: "username" },
+      },
+      async authorize(credentials) {
+        console.log("credentials: ", credentials);
+        if (!credentials) {
+          console.log("No credentials");
+          return Promise.resolve(null);
+        }
+        let user = await prisma.user.findUnique({
+          where: {
+            address: credentials.address,
+          },
+        });
+        console.log(user);
+        if (!user) {
+          console.log("Creating user");
+          user = await prisma.user.create({
+            data: {
+              address: credentials.address,
+              username: credentials.username,
+            },
+          });
+        }
+        return Promise.resolve(user);
       },
     }),
   ],
@@ -56,7 +87,7 @@ export const authOptions: NextAuthOptions = {
         // @ts-expect-error
         id: token.sub,
         // @ts-expect-error
-        username: token?.user?.username || token?.user?.gh_username,
+        address: token?.user?.address,
       };
       return session;
     },
@@ -69,6 +100,7 @@ export function getSession() {
       id: string;
       name: string;
       username: string;
+      address: string;
       email: string;
       image: string;
     };

@@ -7,6 +7,10 @@ import { useState } from "react";
 import { redirect } from "next/navigation";
 import axios from "axios";
 import { snowball } from "@/lib/snowball";
+import { signIn } from "next-auth/react";
+import { sign } from "crypto";
+import { cal } from "@/styles/fonts";
+import { add } from "date-fns";
 
 enum RegistrationState {
   Default,
@@ -35,17 +39,8 @@ const LoginPage = () => {
       }
 
       const address = await snowball.getAddress();
-      const response = await fetch("/api/auth", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ address, username }),
-      });
-      // TODO: Save the token securely ie HttpOnly cookie
-      // For now, we'll save it in localStorage (not recommended for production)
-      localStorage.setItem("token", await response.text());
-      redirect("/dashboard");
+
+      await signIn("snowball-auth", { address: address, username: username });
     } catch (err) {
       setError(`Error: ${JSON.stringify(err)}`);
     }

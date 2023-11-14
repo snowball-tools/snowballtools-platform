@@ -75,6 +75,7 @@ export default function Form({
         ) : inputAttrs.name === "font" ? (
           <div className="flex max-w-sm items-center overflow-hidden rounded-lg border border-stone-600">
             <select
+              title="Font"
               name="font"
               defaultValue={inputAttrs.defaultValue}
               className="w-full rounded-none border-none bg-white px-4 py-2 text-sm font-medium text-stone-700 focus:outline-none focus:ring-black dark:bg-black dark:text-stone-200 dark:focus:ring-white"
