@@ -1,133 +1,115 @@
-import { getServerSession, type NextAuthOptions } from "next-auth";
-import GitHubProvider from "next-auth/providers/github";
-import { PrismaAdapter } from "@next-auth/prisma-adapter";
-import prisma from "@/lib/prisma";
+import { snowball } from "./snowball";
 
-const VERCEL_DEPLOYMENT = !!process.env.VERCEL_URL;
-
-export const authOptions: NextAuthOptions = {
-  providers: [
-    GitHubProvider({
-      clientId: process.env.AUTH_GITHUB_ID as string,
-      clientSecret: process.env.AUTH_GITHUB_SECRET as string,
-      profile(profile) {
-        return {
-          id: profile.id.toString(),
-          name: profile.name || profile.login,
-          gh_username: profile.login,
-          email: profile.email,
-          image: profile.avatar_url,
-        };
-      },
-    }),
-  ],
-  pages: {
-    signIn: `/login`,
-    verifyRequest: `/login`,
-    error: "/login", // Error code passed in query string as ?error=
-  },
-  adapter: PrismaAdapter(prisma),
-  session: { strategy: "jwt" },
-  cookies: {
-    sessionToken: {
-      name: `${VERCEL_DEPLOYMENT ? "__Secure-" : ""}next-auth.session-token`,
-      options: {
-        httpOnly: true,
-        sameSite: "lax",
-        path: "/",
-        // When working on localhost, the cookie domain must be omitted entirely (https://stackoverflow.com/a/1188145)
-        domain: VERCEL_DEPLOYMENT
-          ? `.${process.env.NEXT_PUBLIC_ROOT_DOMAIN}`
-          : undefined,
-        secure: VERCEL_DEPLOYMENT,
-      },
-    },
-  },
-  callbacks: {
-    jwt: async ({ token, user }) => {
-      if (user) {
-        token.user = user;
-      }
-      return token;
-    },
-    session: async ({ session, token }) => {
-      session.user = {
-        ...session.user,
-        // @ts-expect-error
-        id: token.sub,
-        // @ts-expect-error
-        username: token?.user?.username || token?.user?.gh_username,
-      };
-      return session;
-    },
-  },
+export type User = {
+  username: string;
+  ethAddress: string;
+  sessionExpiresAt: number;
 };
 
-export function getSession() {
-  return getServerSession(authOptions) as Promise<{
-    user: {
-      id: string;
-      name: string;
-      username: string;
-      email: string;
-      image: string;
-    };
-  } | null>;
+export type AuthStatus =
+  | { name: "init"; syncing: boolean }
+  | { name: "signed-in"; syncing: boolean; user: User }
+  | { name: "signed-out"; syncing: boolean }
+  | { name: "signing-in"; syncing: boolean }
+  | { name: "signed-up"; syncing: boolean; username: string };
+
+export let status: AuthStatus = { name: "init", syncing: false };
+
+export let syncStatusPromise: Promise<AuthStatus> = Promise.resolve(status);
+
+export function checkStatus() {
+  if (status.syncing) return syncStatusPromise;
+
+  let user: User | null = null;
+  try {
+    user = JSON.parse(localStorage.getItem("user") as any);
+    if (!user?.sessionExpiresAt || Date.now() > user.sessionExpiresAt) {
+      user = null;
+    }
+  } catch {
+    // ignore
+  }
+
+  return (syncStatusPromise = (async () => {
+    status.syncing = true;
+
+    status = user
+      ? { name: "signed-in", syncing: false, user }
+      : { name: "signed-out", syncing: false };
+
+    return status;
+  })());
 }
 
-export function withSiteAuth(action: any) {
-  return async (
-    formData: FormData | null,
-    siteId: string,
-    key: string | null,
-  ) => {
-    const session = await getSession();
-    if (!session) {
-      return {
-        error: "Not authenticated",
-      };
-    }
-    const site = await prisma.site.findUnique({
-      where: {
-        id: siteId,
-      },
-    });
-    if (!site || site.userId !== session.user.id) {
-      return {
-        error: "Not authorized",
-      };
-    }
+export function signIn() {
+  if (status.syncing) return syncStatusPromise;
 
-    return action(formData, site, key);
-  };
+  // TODO: Load from kv
+  const username = status.name === "signed-up" ? status.username : "<unknown>";
+
+  status = { name: "signing-in", syncing: true };
+
+  return (syncStatusPromise = (async () => {
+    try {
+      await snowball.authenticate();
+      const DEFAULT_EXP = new Date(
+        Date.now() + 1000 * 60 * 60 * 24 * 7,
+      ).getTime();
+      const ethAddress = await snowball.getAddress();
+
+      const user: User = {
+        username,
+        ethAddress,
+        sessionExpiresAt: DEFAULT_EXP,
+      };
+
+      localStorage.setItem("user", JSON.stringify(user));
+
+      status = { name: "signed-in", syncing: false, user };
+      return status;
+    } catch (error) {
+      console.error(error);
+      status = { name: "signed-out", syncing: false };
+      return status;
+    }
+  })());
 }
 
-export function withPostAuth(action: any) {
-  return async (
-    formData: FormData | null,
-    postId: string,
-    key: string | null,
-  ) => {
-    const session = await getSession();
-    if (!session?.user.id) {
-      return {
-        error: "Not authenticated",
-      };
-    }
-    const post = await prisma.post.findUnique({
-      where: {
-        id: postId,
-      },
-      include: {
-        site: true,
-      },
-    });
-    if (!post || post.userId !== session.user.id) {
-      return {
-        error: "Post not found",
-      };
-    }
+export function signUp(username: string) {
+  if (status.syncing) return syncStatusPromise;
 
-    return action(formData, post, key);
-  };
+  status = { name: "signing-in", syncing: true };
+
+  return (syncStatusPromise = (async () => {
+    try {
+      await snowball.register(username);
+      const DEFAULT_EXP = new Date(
+        Date.now() + 1000 * 60 * 60 * 24 * 7,
+      ).getTime();
+      const ethAddress = await snowball.getAddress();
+
+      const user: User = {
+        username,
+        ethAddress,
+        sessionExpiresAt: DEFAULT_EXP,
+      };
+
+      localStorage.setItem("user", JSON.stringify(user));
+
+      status = { name: "signed-up", syncing: false, username };
+      return status;
+    } catch (error) {
+      console.error(error);
+      status = { name: "signed-out", syncing: false };
+      return status;
+    }
+  })());
+}
+
+export function signOut() {
+  if (status.syncing) return syncStatusPromise;
+
+  status = { name: "signed-out", syncing: false };
+
+  localStorage.removeItem("user");
 }

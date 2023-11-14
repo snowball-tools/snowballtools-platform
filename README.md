@@ -25,7 +25,7 @@ yarn lint
 ```
 
 ## Prisma
-  
+
 ```zsh
 yarn prisma init // Set up a new Prisma project
 yarn prisma migrate dev // Create a migration from your Prisma schema, apply it to the database, and generate artifacts (e.g. Prisma Client)

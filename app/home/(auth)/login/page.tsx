@@ -7,6 +7,7 @@ import { useState } from "react";
 import { redirect } from "next/navigation";
 import axios from "axios";
 import { snowball } from "@/lib/snowball";
+import Input from "@/components/input";
 
 enum RegistrationState {
   Default,
@@ -74,11 +75,7 @@ const LoginPage = () => {
           }
         >
           {registrationState === RegistrationState.Registering ? (
-            <input
-              className="group my-2 flex h-10 w-full items-center justify-center space-x-2 rounded-md border border-stone-200 bg-white text-sm font-medium text-stone-600 transition-colors  placeholder:text-stone-700 focus:border-black focus:ring-stone-700 dark:border-stone-700 dark:bg-black  dark:text-stone-400 dark:hover:bg-black"
-              onChange={(e) => setUsername(e.target.value)}
-              placeholder="ie. Taylor Swift"
-            />
+            <Input setUsername={setUsername} />
           ) : (
             <AuthButton type={AuthButtonType.Login} onClick={handleLogin} />
           )}
